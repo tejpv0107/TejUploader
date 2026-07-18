@@ -25,9 +25,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
+
 @bot.on_message(filters.command(["start"]))
 async def account_login(bot: Client, m: Message):
-    await m.reply_text(f"😈**Hi bruh!**\n**🟢I'm Alive You can Use by /master**\n\n**<-URL Acceptable->**\n-`All Non-Drm+Drm Protected Url`\n-`Mpeg Dash Url`\n-`Vision IAS`\n-`PhysicsWallah`\n-`ClassPlus Url`\n-`Allen Institute`\n\n**Thanks for using me**\n\n**Developer -** `@St2Master`")
+    await m.reply_text(f"😈**Hi bruh!**\n**🟢I'm Alive You can Use by /master**\n\n**<-URL Acceptable->**\n-`All Non-Drm+Drm Protected Url`\n-`Mpeg Dash Url`\n-`Vision IAS`\n-`PhysicsWallah`\n-`ClassPlus Url`\n-`Allen Institute`\n-`Appx Engine Links`\n\n**Thanks for using me**\n\n**Developer -** `@St2Master`")
 
 
 @bot.on_message(filters.command("stop"))
@@ -50,9 +51,10 @@ async def account_login(bot: Client, m: Message):
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
         os.makedirs(temp_dir)
+        
+        # --- LINK PARSING KA FIX ---
         if input.document:
             x = await input.download()
-            #await bot.send_document(-1002091543838, x)
             await input.delete(True)
             file_name = os.path.splitext(os.path.basename(x))[0]
         
@@ -60,7 +62,12 @@ async def account_login(bot: Client, m: Message):
                 with open(x, "r") as f:
                     content = f.read()
                 content = content.split("\n")
-                links = [i.split("://", 1) for i in content]
+                links = []
+                for line in content:
+                    if "http" in line:
+                        parts = re.split(r':(?=https?://)', line.strip(), maxsplit=1)
+                        if len(parts) == 2:
+                            links.append([parts[0], parts[1].replace("https://", "").replace("http://", "")])
                 os.remove(x)
             except Exception as e:
                 await m.reply_text(f"Error processing file: {e}")
@@ -69,8 +76,15 @@ async def account_login(bot: Client, m: Message):
         else:
             content = input.text
             content = content.split("\n")
-            links = [i.split("://", 1) for i in content]
+            links = []
+            for line in content:
+                if "http" in line:
+                    parts = re.split(r':(?=https?://)', line.strip(), maxsplit=1)
+                    if len(parts) == 2:
+                        links.append([parts[0], parts[1].replace("https://", "").replace("http://", "")])
             await input.delete(True)
+        # ---------------------------
+
         await editable.edit(f"Total links🔗 found are **{len(links)}**\n\nSend From where you want to download initial is **1**")
         if m.chat.id not in Config.VIP_USERS:
             print(f"User ID not in AUTH_USERS", m.chat.id)
@@ -99,8 +113,7 @@ async def account_login(bot: Client, m: Message):
         raw_text2 = input2.text
         await input2.delete(True)
 
-
-        await editable.edit("**Enter Your Channel Name or Owner Name**\n\nEg : Dᴏᴡɴʟᴏᴀᴅ Bʏ : `『ᎷΔŞŦᏋᏒ』❤️`")
+        await editable.edit("**Enter Your Channel Name or Owner Name**\n\nEg : Dᴏᴡɴʟᴏᴀ doorway Bʏ : `『ᎷΔŞŦᏋᏒ』❤️`")
         input3: Message = await bot.listen(editable.chat.id)
         raw_text3 = input3.text
         await input3.delete(True)
@@ -128,14 +141,18 @@ async def account_login(bot: Client, m: Message):
             await m.reply_text(f"**Fail Reason »** {e}\n\n**Bot Made By** 🌟『@NtrRazYt』🌟")
             return
         await editable.delete()
+        
         if len(links) == 1:
             count = 1
         else:
             count = int(raw_text)
+            
         mpd = None
         for i in range(count - 1, len(links)):
             V = links[i][1]
             url = "https://" + V
+            
+            # --- PLATFORM CHECKING ---
             if "*" in url:
                 mpd, keys = url.split("*")
                 print(mpd, keys)
@@ -166,6 +183,13 @@ async def account_login(bot: Client, m: Message):
                         text = await resp.text()
                         url = re.search(r"(https://.*?playlist.m3u8.*?)\"", text).group(1)
                         print(url)
+            
+            # === NAYA APPX BLOCK CODE ADDED ===
+            elif "appx.co.in" in url:
+                if ".zip" in url:
+                    # Zip format video ko bypass bina decryption ke direct mp4 format me yt-dlp pakdega
+                    pass
+            # ==================================
 
             name1 = links[i][0].replace("\t", "").replace(":", " ").replace("/", "").replace("+", "").replace("#", "").replace("|", "").replace("@", "").replace("*", "").replace(".", "").replace("https", "").replace("http", "").strip()
             name = f'{str(count).zfill(3)}){name1[:60]}'
@@ -174,13 +198,18 @@ async def account_login(bot: Client, m: Message):
                 ytf = f"b[height<={raw_text2}][ext=mp4]/bv[height<={raw_text2}][ext=mp4]+ba[ext=m4a]/b[ext=mp4]"
             else:
                 ytf = f"b[height<={raw_text2}]/bv[height<={raw_text2}]+ba/b/bv+ba"
+            
             if "jw-prod" in url:
                 cmd = f'yt-dlp -o "{name}.mp4" "{url}"'
+            # Appx zip videos ke liye custom command
+            elif "appx.co.in" in url and ".zip" in url:
+                cmd = f'yt-dlp "{url}" -o "{name}.mp4"'
             else:
                 cmd = f'yt-dlp -f "{ytf}" "{url}" -o "{name}.mp4"'    
+                
             try:
                 cc = f'**[🎥]Vid Id  ➠** {str(count).zfill(3)}\n** Tᴏᴘɪᴄ ➠** {name1} [{raw_text2}] .mkv \n\n** Bᴀᴛᴄʜ Nᴀᴍᴇ ➠ ** {b_name}\n\n** 𝖠ᴘᴘ 𝖭ᴀᴍᴇ ➤ ** {app_name}\n\n** 🌟Dᴏᴡɴʟᴏᴀᴅ Bʏ ➤ {MR}**\n\n'
-                cc1 = f'**[📕]Pdf Id  ➠** {str(count).zfill(3)}\n** Tᴏᴘɪᴄ ➠** {name1} .pdf \n\n** Bᴀᴛᴄʜ Nᴀᴍᴇ ➠:** {b_name}\n\n** 𝖠ᴘᴘ 𝖭ᴀᴍᴇ ➤ ** {app_name}\n\n** 🌟Dᴏᴡɴʟᴏᴀᴅ Bʏ ➤ {MR}**\n\n'                   
+                cc1 = f'**[📕]Pdf Id  ➠** {str(count).zfill(3)}\n** Tᴏᴘɪᴄ ➠** {name1} .pdf \n\n** Bᴀᴛᴄʜ Nᴀᴍᴇ ➠:** {b_name}\n\n** 𝖠ᴘᴘ 𝖭ᴀᴍᴇ ➤ ** {app_name}\n\n** 🌟Dᴏᴡɴʟᴏᴀﬂ Bʏ ➤ {MR}**\n\n'                   
 
                 if "drive" in url or ".pdf" in url or "pdfs" in url:
                     try:
@@ -217,8 +246,9 @@ async def account_login(bot: Client, m: Message):
             except Exception as e:
                 await bot.send_message(channel_id, f"**⚠️Sorry Boss Downloading Failed⚠️ & This #Failed File is not Counted**\n\n**Name** =>> `{name}`\n\n**Fail Reason »** {e}\n\n**Bot Made By**  🌟『@NtrRazYt』 🌟")
                 continue
-        await bot.send_message(channel_id, " 🌟** Sᴜᴄᴄᴇsғᴜʟʟʏ Dᴏᴡɴʟᴏᴀᴅᴇᴅ Aʟʟ Lᴇᴄᴛᴜʀᴇs...! **🌟 ")
+        await bot.send_message(channel_id, " 🌟** SᴜᴄᴄᴇsғᴜʟʟY Dᴏᴡɴʟᴏᴀᴅᴇᴅ Aʟʟ Lᴇᴄᴛᴜʀᴇs...! **🌟 ")
     except Exception as e:
         await m.reply_text(f"**⚠️Sorry Boss Downloading Failed⚠️**\n\n**Fail Reason »** {e}\n\n**Bot Made By**  🌟『@NtrRazYt』 🌟")
         return
+
 bot.run()
