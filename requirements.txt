@@ -1,9 +1,5 @@
-aiofiles
-aiohttp
-yt-dlp
-pyromod
-TgCrypto==1.2.5
 pyrogram
-xmltodict 
-requests 
-pycryptodomex
+pyromod
+tgcrypto
+requests
+aiohttp
