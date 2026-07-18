@@ -52,7 +52,7 @@ async def account_login(bot: Client, m: Message):
             shutil.rmtree(temp_dir)
         os.makedirs(temp_dir)
         
-        # --- LINK PARSING KA FIX ---
+        # --- LINK PARSING FIX (URLPREFIX PARSE PROBLEM RESOLVED) ---
         if input.document:
             x = await input.download()
             await input.delete(True)
@@ -83,7 +83,6 @@ async def account_login(bot: Client, m: Message):
                     if len(parts) == 2:
                         links.append([parts[0], parts[1].replace("https://", "").replace("http://", "")])
             await input.delete(True)
-        # ---------------------------
 
         await editable.edit(f"Total links🔗 found are **{len(links)}**\n\nSend From where you want to download initial is **1**")
         if m.chat.id not in Config.VIP_USERS:
@@ -113,7 +112,7 @@ async def account_login(bot: Client, m: Message):
         raw_text2 = input2.text
         await input2.delete(True)
 
-        await editable.edit("**Enter Your Channel Name or Owner Name**\n\nEg : Dᴏᴡɴʟᴏᴀ doorway Bʏ : `『ᎷΔŞŦᏋᏒ』❤️`")
+        await editable.edit("**Enter Your Channel Name or Owner Name**\n\nEg : Dᴏᴡɴʟᴏᴀᴅ Bʏ : `『ᎷΔŞŦᏋᏒ』❤️`")
         input3: Message = await bot.listen(editable.chat.id)
         raw_text3 = input3.text
         await input3.delete(True)
@@ -152,7 +151,7 @@ async def account_login(bot: Client, m: Message):
             V = links[i][1]
             url = "https://" + V
             
-            # --- PLATFORM CHECKING ---
+            # --- PLATFORM PARSING ---
             if "*" in url:
                 mpd, keys = url.split("*")
                 print(mpd, keys)
@@ -183,13 +182,6 @@ async def account_login(bot: Client, m: Message):
                         text = await resp.text()
                         url = re.search(r"(https://.*?playlist.m3u8.*?)\"", text).group(1)
                         print(url)
-            
-            # === NAYA APPX BLOCK CODE ADDED ===
-            elif "appx.co.in" in url:
-                if ".zip" in url:
-                    # Zip format video ko bypass bina decryption ke direct mp4 format me yt-dlp pakdega
-                    pass
-            # ==================================
 
             name1 = links[i][0].replace("\t", "").replace(":", " ").replace("/", "").replace("+", "").replace("#", "").replace("|", "").replace("@", "").replace("*", "").replace(".", "").replace("https", "").replace("http", "").strip()
             name = f'{str(count).zfill(3)}){name1[:60]}'
@@ -201,15 +193,12 @@ async def account_login(bot: Client, m: Message):
             
             if "jw-prod" in url:
                 cmd = f'yt-dlp -o "{name}.mp4" "{url}"'
-            # Appx zip videos ke liye custom command
-            elif "appx.co.in" in url and ".zip" in url:
-                cmd = f'yt-dlp "{url}" -o "{name}.mp4"'
             else:
                 cmd = f'yt-dlp -f "{ytf}" "{url}" -o "{name}.mp4"'    
                 
             try:
                 cc = f'**[🎥]Vid Id  ➠** {str(count).zfill(3)}\n** Tᴏᴘɪᴄ ➠** {name1} [{raw_text2}] .mkv \n\n** Bᴀᴛᴄʜ Nᴀᴍᴇ ➠ ** {b_name}\n\n** 𝖠ᴘᴘ 𝖭ᴀᴍᴇ ➤ ** {app_name}\n\n** 🌟Dᴏᴡɴʟᴏᴀᴅ Bʏ ➤ {MR}**\n\n'
-                cc1 = f'**[📕]Pdf Id  ➠** {str(count).zfill(3)}\n** Tᴏᴘɪᴄ ➠** {name1} .pdf \n\n** Bᴀᴛᴄʜ Nᴀᴍᴇ ➠:** {b_name}\n\n** 𝖠ᴘᴘ 𝖭ᴀᴍᴇ ➤ ** {app_name}\n\n** 🌟Dᴏᴡɴʟᴏᴀﬂ Bʏ ➤ {MR}**\n\n'                   
+                cc1 = f'**[📕]Pdf Id  ➠** {str(count).zfill(3)}\n** Tᴏᴘɪᴄ ➠** {name1} .pdf \n\n** Bᴀᴛᴄʜ Nᴀᴍᴇ ➠:** {b_name}\n\n** 𝖠ᴘᴘ 𝖭ᴀᴍᴇ ➤ ** {app_name}\n\n** 🌟Dᴏᴡɴʟᴏᴀᴅ Bʏ ➤ {MR}**\n\n'                   
 
                 if "drive" in url or ".pdf" in url or "pdfs" in url:
                     try:
@@ -234,10 +223,27 @@ async def account_login(bot: Client, m: Message):
                     time.sleep(3)
                 else:
                     mpd = None
-                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}\n🎥Video Quality - {raw_text2}\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
+                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥Video Quality - {raw_text2}\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
                     prog = await bot.send_message(channel_id, Show)
-                    res_file = await helper.download_video(url, cmd, name)
-                    filename = res_file
+                    
+                    # === CRITICAL FIX FOR APPX ERROR NO SUCH FILE OR DIRECTORY ===
+                    if "appx.co.in" in url and ".zip" in url:
+                        # Helper file directory path setup 
+                        os.makedirs(path, exist_ok=True)
+                        filename = os.path.join(path, "video.mp4") # helper.py ke exact demand name par save
+                        
+                        # Binary mode me stable chunks se requests module ke sath direct download
+                        r = requests.get(url, stream=True)
+                        with open(filename, 'wb') as f:
+                            for chunk in r.iter_content(chunk_size=1024*1024):
+                                if chunk:
+                                    f.write(chunk)
+                    else:
+                        # Baaki normal urls ke liye helper.py ka standard method
+                        res_file = await helper.download_video(url, cmd, name)
+                        filename = res_file
+                    # =============================================================
+                        
                     await prog.delete(True)
                     await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
                     count += 1
@@ -246,7 +252,7 @@ async def account_login(bot: Client, m: Message):
             except Exception as e:
                 await bot.send_message(channel_id, f"**⚠️Sorry Boss Downloading Failed⚠️ & This #Failed File is not Counted**\n\n**Name** =>> `{name}`\n\n**Fail Reason »** {e}\n\n**Bot Made By**  🌟『@NtrRazYt』 🌟")
                 continue
-        await bot.send_message(channel_id, " 🌟** SᴜᴄᴄᴇsғᴜʟʟY Dᴏᴡɴʟᴏᴀᴅᴇᴅ Aʟʟ Lᴇᴄᴛᴜʀᴇs...! **🌟 ")
+        await bot.send_message(channel_id, " 🌟** Sᴜᴄᴄᴇsғᴜʟʟʏ Dᴏᴡɴʟᴏᴀᴅᴇᴅ Aʟʟ Lᴇᴄᴛᴜʀᴇs...! **🌟 ")
     except Exception as e:
         await m.reply_text(f"**⚠️Sorry Boss Downloading Failed⚠️**\n\n**Fail Reason »** {e}\n\n**Bot Made By**  🌟『@NtrRazYt』 🌟")
         return
