@@ -3,6 +3,7 @@ import re
 import time
 import logging
 import subprocess
+import requests
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyromod import listen
@@ -19,7 +20,7 @@ bot = Client(
 
 @bot.on_message(filters.command(["start"]))
 async def start(bot: Client, m: Message):
-    await m.reply_text("👋 **Universal Downloader Bot Active!**\n\n➡ `/download` command bhejin aur batch download shuru karein.")
+    await m.reply_text("👋 **Universal Appx Patched Downloader Active!**\n\n➡ `/download` command bhejin.")
 
 @bot.on_message(filters.command(["download"]))
 async def processor(bot: Client, m: Message):
@@ -32,7 +33,7 @@ async def processor(bot: Client, m: Message):
         user_file: Message = await bot.listen(editable.chat.id)
         
         if not user_file.document:
-            await editable.edit("❌ **Error:** Valid file nahi mili. Phir se try karein.")
+            await editable.edit("❌ **Error:** Valid file nahi mili.")
             return
 
         await editable.edit("⏳ **File processing shuru hai...**")
@@ -56,7 +57,7 @@ async def processor(bot: Client, m: Message):
             await editable.edit("❌ **Error:** File ke andar koi valid links nahi mili.")
             return
 
-        await editable.edit(f"📊 Total **{len(queue)}** Links mili hain.\n\n🆔 Target **Channel ID** send karein (Ya direct inbox ke liye `/d`):")
+        await editable.edit(f"📊 Total **{len(queue)}** Items mile hain.\n\n🆔 Target **Channel ID** send karein (Ya direct inbox ke liye `/d`):")
         user_channel: Message = await bot.listen(editable.chat.id)
         channel_id = m.chat.id if "/d" in user_channel.text else user_channel.text.strip()
         await user_channel.delete(True)
@@ -65,43 +66,68 @@ async def processor(bot: Client, m: Message):
         await bot.send_message(chat_id=channel_id, text=f"🎯 **New Batch Started! Total Items: {len(queue)}**")
         await editable.delete()
 
+        # Premium Spoofing Headers for Appx Server Security Bypass
+        headers_str = (
+            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+            "Accept: */*\r\n"
+            "Accept-Language: en-US,en;q=0.9\r\n"
+            "Origin: https://web.appx.co.in\r\n"
+            "Referer: https://web.appx.co.in/\r\n"
+        )
+
         count = 1
         for name, raw_url in queue:
+            actual_url = raw_url.split("*", 1)[0].strip() if "*" in raw_url else raw_url
+            
+            # --- CASE 1: AGAR LINK PDF HAI ---
+            if ".pdf" in actual_url.lower():
+                status_msg = await bot.send_message(channel_id, f"📥 **Downloading PDF ({count}/{len(queue)}):** `{name}`")
+                local_pdf = f"{name}.pdf"
+                try:
+                    pdf_headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                        "Accept": "*/*",
+                        "Referer": "https://web.appx.co.in/"
+                    }
+                    r = requests.get(actual_url, headers=pdf_headers, stream=True, timeout=30)
+                    with open(local_pdf, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    
+                    await status_msg.edit(f"📤 **Uploading PDF:** `{name}`")
+                    await bot.send_document(
+                        chat_id=channel_id,
+                        document=local_pdf,
+                        caption=f"📄 **Document:** {str(count).zfill(3)}\n📝 **Title:** {name}"
+                    )
+                    os.remove(local_pdf)
+                    await status_msg.delete()
+                    count += 1
+                except Exception as pdf_err:
+                    await bot.send_message(channel_id, f"❌ **PDF Failed:** `{name}`\n⚠️ **Reason:** {pdf_err}")
+                    if os.path.exists(local_pdf): os.remove(local_pdf)
+                continue
+
+            # --- CASE 2: AGAR LINK VIDEO/ZIP HAI ---
             video_name = f"{str(count).zfill(3)}) {name}"
-            status_msg = await bot.send_message(channel_id, f"📥 **Downloading ({count}/{len(queue)}):** `{video_name}`")
+            status_msg = await bot.send_message(channel_id, f"📥 **Downloading Video ({count}/{len(queue)}):** `{video_name}`")
             local_file = f"{video_name}.mp4"
             
             try:
-                # ROUTE A: WIDEVINE DRM ENCRYPTED LINKS (* key format) - Dynamic Fallback to standard network stream decryption
-                if "*" in raw_url:
-                    mpd_url, key = raw_url.split("*", 1)
-                    # Key pattern logic for native decoding stream
-                    decryption_key = key.strip()
-                    
-                    # Direct native stream merger handling via static platform engine
-                    # Using global yt-dlp layer or direct ffmpeg decryption decryption protocols
-                    cmd = [
-                        "ffmpeg", "-y", 
-                        "-decryption_key", decryption_key.replace(":", ""), # clean key format for dynamic protocols
-                        "-i", mpd_url.strip(), 
-                        "-c", "copy", 
-                        local_file
-                    ]
-                    
-                    # Agar key processing parameters unique hain to dynamic extraction execute karein
-                    if ":" in decryption_key:
-                        # Fallback mode for standalone token pipelines
-                        cmd = ["ffmpeg", "-y", "-i", mpd_url.strip(), "-c", "copy", local_file]
-                        
-                    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                # Spoofing parameters include karke ffmpeg command run karna
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-headers", headers_str,
+                    "-i", actual_url,
+                    "-c", "copy",
+                    "-bsf:a", "aac_adtstoasc",  # Audio filter for stream extraction stability
+                    local_file
+                ]
                 
-                # ROUTE B: APPX ENCRYPTED STREAMING CONTAINER LINKS (.zip formats)
-                else:
-                    cmd = ["ffmpeg", "-y", "-i", raw_url, "-c", "copy", local_file]
-                    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
                 if os.path.exists(local_file) and os.path.getsize(local_file) > 1000:
-                    await status_msg.edit(f"📤 **Uploading:** `{video_name}`")
+                    await status_msg.edit(f"📤 **Uploading Video:** `{video_name}`")
                     await bot.send_video(
                         chat_id=channel_id,
                         video=local_file,
@@ -111,12 +137,10 @@ async def processor(bot: Client, m: Message):
                     await status_msg.delete()
                     count += 1
                 else:
-                    raise FileNotFoundError("Video buffer properly dump nahi ho paya server par.")
-                
-                time.sleep(2)
+                    raise FileNotFoundError("Server se video package correctly fetch nahi hua (Size limit issue).")
 
             except Exception as e:
-                await bot.send_message(channel_id, f"❌ **Failed:** `{video_name}`\n⚠️ **Reason:** {e}")
+                await bot.send_message(channel_id, f"❌ **Video Failed:** `{video_name}`\n⚠️ **Reason:** {e}")
                 if os.path.exists(local_file): os.remove(local_file)
                 continue
 
