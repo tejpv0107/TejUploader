@@ -18,25 +18,30 @@ bot = Client(
     api_hash=Config.API_HASH
 )
 
-# Core System check jo Linux DRM tools ko runtime par load aur permissions grant karega
+# Robust binary management layer for Linux environments
 def init_drm_engine():
     binary_path = "./N_m3u8DL-RE"
     if not os.path.exists(binary_path):
-        logging.info("Downloading Linux x64 DRM Decryption Engine...")
-        url = "https://github.com/nilaoda/N_m3u8DL-RE/releases/download/v0.3.0-beta/N_m3u8DL-RE_v0.3.0-beta_linux-x64.tar.gz"
+        logging.info("Downloading Linux x64 DRM Decryption Engine directly...")
+        # Direct static compiled binary source URL to avoid extraction errors
+        url = "https://github.com/nilaoda/N_m3u8DL-RE/releases/download/v0.2.0-beta/N_m3u8DL-RE_v0.2.0-beta_linux-x64"
         try:
-            r = requests.get(url)
-            with open("engine.tar.gz", "wb") as f:
-                f.write(r.content)
-            os.system("tar -xzf engine.tar.gz")
-            if os.path.exists("./N_m3u8DL-RE_v0.3.0-beta_linux-x64/N_m3u8DL-RE"):
-                os.rename("./N_m3u8DL-RE_v0.3.0-beta_linux-x64/N_m3u8DL-RE", binary_path)
-            if os.path.exists("engine.tar.gz"): os.remove("engine.tar.gz")
+            r = requests.get(url, stream=True)
+            if r.status_code == 200:
+                with open(binary_path, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                logging.info("Download completed successfully.")
+            else:
+                logging.error(f"Failed to fetch engine, status code: {r.status_code}")
         except Exception as e:
             logging.error(f"Failed to setup core binary: {e}")
             
     if os.path.exists(binary_path):
         os.chmod(binary_path, 0o755)
+        logging.info("Permissions granted to the binary executable.")
+    else:
+        logging.error("Critical Error: Binary path still does not exist!")
 
 @bot.on_message(filters.command(["start"]))
 async def start(bot: Client, m: Message):
@@ -102,7 +107,6 @@ async def processor(bot: Client, m: Message):
                 
                 # ROUTE B: APPX ENCRYPTED STREAMING CONTAINER LINKS (.zip formats)
                 else:
-                    # FFmpeg raw standard streaming dump logic layer
                     cmd = ["ffmpeg", "-y", "-i", raw_url, "-c", "copy", local_file]
                     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
